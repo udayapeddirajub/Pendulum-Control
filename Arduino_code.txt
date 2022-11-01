@@ -1,0 +1,195 @@
+#include <Arduino.h>
+//input pins
+
+  // Rotary encoder
+  #define Encoder_A 2 
+  #define Encoder_B 3
+
+   //IR Sensor
+  #define IR 9 
+
+  // PIR sensor
+  #define PIR 10
+  
+  //Switch
+  #define Switch 11
+
+//output pins
+
+  // buzzer pins
+  #define Buzzer 4 
+
+  // motor driver pins
+  #define Motor_A 5 
+  #define Motor_B 6 
+
+    // Green LED pins
+  #define GLED 7 
+
+   // red LED pins
+  #define RLED 8
+
+
+
+  // pulses per revolution  
+const int PPR = 1000;
+float AngularPos = 0.0;
+unsigned long previousMillis = 0;
+int num = 0;
+int State = LOW;
+volatile long int encoderValue = 0;
+void(* resetFunc) (void) = 0;
+
+//User defined functions
+
+void encoderHandler_A()
+{
+  if (digitalRead(Encoder_A) != digitalRead(Encoder_B))
+  {
+    encoderValue++;
+  }
+  else
+  {
+    encoderValue--;
+  }
+}
+void encoderHandler_B()
+{
+  if (digitalRead(Encoder_A) == digitalRead(Encoder_B))
+  {
+    encoderValue++;
+  }
+  else
+  {
+    encoderValue--;
+  }
+}
+
+void Gameend(unsigned long currentMillis){
+  digitalWrite(GLED, LOW);
+  digitalWrite(RLED, HIGH);
+    //For buzzer (3 beeps)
+    if (currentMillis - previousMillis >= 1000  && num <= 5){
+     previousMillis = currentMillis;
+     if (State == LOW) {
+        State = HIGH;
+      } else {
+        State = LOW;
+        }
+      num = num+1;
+      digitalWrite(Buzzer,State);
+      if(num > 5){
+      digitalWrite(RLED,LOW);
+        delay(1000);
+      resetFunc(); 
+      }
+    }}
+void setup() {
+
+  pinMode (Encoder_A, INPUT_PULLUP);
+  pinMode (Encoder_B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(Encoder_A),encoderHandler_A, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(Encoder_B),encoderHandler_B, CHANGE);
+
+  pinMode(IR, INPUT);
+  pinMode(PIR, INPUT);
+  pinMode(Switch, INPUT);
+
+  pinMode(Buzzer, OUTPUT);
+  pinMode(Motor_A, OUTPUT);
+  pinMode(Motor_B, OUTPUT);
+  pinMode(GLED, OUTPUT);
+  pinMode(RLED, OUTPUT);
+}
+
+
+
+void loop() {
+  unsigned long currentMilli = millis();
+
+  AngularPos = (encoderValue * 360) / (PPR*4); // angle in degrees.
+
+    //game starts at upright(i.e ~ 180 degrees) [Downward position (reference angle) is zero]
+
+    //Switch low -> manual control
+ if(((AngularPos > 175 ) && (AngularPos < 185)) && (digitalRead(Switch)==LOW) )  //manual start
+ {    digitalWrite(GLED, HIGH);
+      digitalWrite(Buzzer,HIGH);
+    
+    while ((AngularPos >= 95 && AngularPos <= 265) && digitalRead(Switch)==LOW )
+       {
+        if (currentMilli - previousMillis >= 2000){ // Buzzer on for 2s
+        digitalWrite(Buzzer,LOW);
+        }
+        if (digitalRead(PIR) == HIGH) 
+        {
+          Gameend(currentMilli);
+        }
+      
+        //move cart left and right 
+       if (digitalRead(IR)== LOW)
+       {  
+        //move cart left
+        digitalWrite(Motor_A,HIGH);
+        digitalWrite(Motor_B,LOW);
+        delay(50);
+        digitalWrite(Motor_A,LOW);
+        digitalWrite(Motor_B,LOW);
+
+        }else 
+        {
+          //move cart right
+        digitalWrite(Motor_A,LOW);
+        digitalWrite(Motor_B,HIGH);
+        delay(50);
+        digitalWrite(Motor_A,LOW);
+        digitalWrite(Motor_B,LOW);
+        }
+      
+    }//while loop ends
+
+    if((AngularPos < 95 || AngularPos > 265)) //end only when it is out of bound
+    {
+      Gameend(currentMilli);
+    }
+ }
+    
+
+      
+   
+
+  //Switch HIGH -> Automatic control
+
+  if(((AngularPos > 95)&&(AngularPos <265)) && (digitalRead(Switch)==HIGH))
+  {
+      digitalWrite(GLED, HIGH);
+      digitalWrite(Buzzer,HIGH);
+      if (currentMilli - previousMillis >= 2000){ // Buzzer on for 2s
+        digitalWrite(Buzzer,LOW);
+        }
+    if (AngularPos < 180)
+    {
+      //move cart left
+      digitalWrite(Motor_A,HIGH);
+      digitalWrite(Motor_B,LOW);
+      delay(50);
+      digitalWrite(Motor_A,LOW);
+      digitalWrite(Motor_B,LOW);
+    }
+    else if (AngularPos > 180)
+    {
+      //move cart right
+      digitalWrite(Motor_A,LOW);
+      digitalWrite(Motor_B,HIGH);
+      delay(50);
+      digitalWrite(Motor_A,LOW);
+      digitalWrite(Motor_B,LOW);
+    }
+    if((AngularPos < 95 && AngularPos > 265)) //end only when it is out of bound
+    {
+      Gameend(currentMilli);
+    }
+    
+  }
+} //void loop ends
+

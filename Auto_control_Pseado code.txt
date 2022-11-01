@@ -1,0 +1,76 @@
+'''''''''#Pseudocode for Automated invrted pendulum code.
+LED_G=HIGH;
+LED_R=LOW;
+Buzzer=HIGH;
+Delay(2000); # here 2000 means 2sec
+Buzzer=LOW;
+Current_state=Stable_state;  #initial state of the machine
+
+
+void loop()#runs for infinite time or till it finds exit()
+{
+Angle=Track_angle(angle_sensor); #assuming Track angle gives angle in degrees
+
+switch(Current_state) #start with a state stored in Current_state
+{
+
+case(Stable_state):
+	if(Angle<0)
+	{
+		Current_state=Move_left;
+	}
+	else if(Angle>0)
+	{
+		Current_state=Move_right;
+	}
+	
+case(Move_left):
+	if(Angle==0)
+	{
+		Current_state=Stable_state;
+	}
+	else if(Angle>0 && Angle<85)
+	{
+		Current_state=Move_right;
+	}
+	else if (Angle>85 && Angle<-85)
+	{
+		Current_state=Stop;
+	}
+	else if(Angle<0 && Angle>-85)
+		Current_state=Move_left;
+
+case(Move_right):
+	if(Angle==0)
+	{
+		Current_state=Stable_state;
+	}
+	else if(Angle>0 && Angle<85)
+	{
+		Current_state=Move_right;
+	}
+	else if (Angle>85 && Angle<-85)
+	{
+		Current_state=Stop;
+	}
+	else if(Angle<0 && Angle>-85)
+		Current_state=Move_left;
+
+case(Stop):
+	LED_G=LOW;
+	for(i=1;i<3;i++) #for 3 beeps with 1sec interval and for 1sec duration
+	{
+		Buzzer=HIGH;
+		Delay(1000);
+		Buzzer=LOW;
+		Delay(1000);
+                if(i==2)
+			{
+				Buzzer=HIGH;
+				Delay(1000);	
+			}
+	}
+	exit(); #it halts the void loop
+
+}
+} 
